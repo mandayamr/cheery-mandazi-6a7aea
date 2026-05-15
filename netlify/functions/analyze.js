@@ -18,24 +18,17 @@ const CORS = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' };
-  if (event.httpMethod !== 'POST') return { statusCode: 405, headers: CORS, body: '"Method not allowed"' };
+  if (event.httpMethod !== 'POST') return { statusCode: 405, headers: CORS, body: '"nope"' };
 
-  let text;
-  try { text = JSON.parse(event.body || '{}').text; } catch(e) { return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Invalid JSON' }) }; }
-  if (!text || !text.trim()) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'No text provided' }) };
+  let text = '';
+  try { text = JSON.parse(event.body || '{}').text || ''; } catch(e) {}
+  if (!text.trim()) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'No text' }) };
 
-  const prompt = `Analyze the emotion in this text. Reply ONLY with raw JSON, no markdown, no explanation.
-
-Text: "${text.trim()}"
-
-JSON format (use real values, not these examples):
-{"primary_emotion":"joy","confidence":0.85,"intensity":"high","emotion_scores":{"joy":0.85,"sadness":0.05,"anger":0.02,"fear":0.02,"surprise":0.03,"disgust":0.01,"neutral":0.01,"anticipation":0.01},"sentiment":"positive","empathetic_response":"One warm sentence responding to the person."}
-
-primary_emotion: joy | sadness | anger | fear | surprise | disgust | neutral | anticipation
-intensity: low | medium | high
-sentiment: positive | negative | neutral | mixed`;
-
-  const payload = JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 400, messages: [{ role: 'user', content: prompt }] });
+  const payload = JSON.stringify({
+    model: 'claude-haiku-4-5',
+    max_tokens: 400,
+    messages: [{ role: 'user', content: `Detect the emotion in this text. Reply ONLY with this exact JSON and nothing else:\n{"primary_emotion":"joy","confidence":0.8,"intensity":"medium","emotion_scores":{"joy":0.8,"sadness":0.05,"anger":0.05,"fear":0.02,"surprise":0.03,"disgust":0.02,"neutral":0.02,"anticipation":0.01},"sentiment":"positive","empathetic_response":"A warm one sentence response."}\n\nText to analyze: ${text.trim()}` }]
+  });
 
   const opts = {
     hostname: 'api.anthropic.com',
@@ -51,17 +44,30 @@ sentiment: positive | negative | neutral | mixed`;
 
   try {
     const res = await httpsPost(opts, payload);
-    if (res.status !== 200) return { statusCode: res.status, headers: CORS, body: res.body };
+
+    if (res.status !== 200) {
+      return { statusCode: 200, headers: CORS, body: JSON.stringify({ error: 'API said ' + res.status + ': ' + res.body }) };
+    }
 
     const api = JSON.parse(res.body);
     const raw = (api.content || []).map(b => b.text || '').join('').trim();
 
     let result;
-    try { result = JSON.parse(raw); }
-    catch(e) { const m = raw.match(/\{[\s\S]*\}/); if (m) result = JSON.parse(m[0]); else return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Bad AI response: ' + raw.slice(0,100) }) }; }
+    try {
+      result = JSON.parse(raw);
+    } catch(e) {
+      const m = raw.match(/\{[\s\S]*\}/);
+      if (m) {
+        try { result = JSON.parse(m[0]); }
+        catch(e2) { return { statusCode: 200, headers: CORS, body: JSON.stringify({ error: 'Parse failed: ' + raw.slice(0,200) }) }; }
+      } else {
+        return { statusCode: 200, headers: CORS, body: JSON.stringify({ error: 'No JSON found in: ' + raw.slice(0,200) }) };
+      }
+    }
 
     return { statusCode: 200, headers: CORS, body: JSON.stringify(result) };
+
   } catch(err) {
-    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: err.message }) };
+    return { statusCode: 200, headers: CORS, body: JSON.stringify({ error: 'Exception: ' + err.message }) };
   }
 };
