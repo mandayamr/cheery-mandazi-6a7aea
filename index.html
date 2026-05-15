@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmotiSense AI — Real-Time Emotion Recognition</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0f0f13;
+  --surface:#1a1a22;
+  --surface2:#22222e;
+  --border:#2e2e3e;
+  --text:#f0f0f8;
+  --muted:#8888aa;
+  --accent:#7f77dd;
+  --accent2:#1d9e75;
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;padding:0;}
+header{padding:1.5rem 2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.logo{font-size:20px;font-weight:600;color:var(--accent);}
+.logo span{color:var(--text);}
+.badge{font-size:11px;padding:4px 10px;border-radius:20px;background:#7f77dd22;color:var(--accent);border:1px solid #7f77dd44;}
+.main{max-width:860px;margin:0 auto;padding:2rem 1.5rem;}
+h1{font-size:28px;font-weight:600;margin-bottom:0.4rem;}
+.sub{color:var(--muted);font-size:14px;margin-bottom:2rem;}
+.mode-row{display:flex;gap:10px;margin-bottom:1.5rem;}
+.mode-btn{flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:13px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.mode-btn.active{border-color:var(--accent);color:var(--accent);background:#7f77dd11;}
+.mode-btn:hover:not(.active){border-color:#444;color:var(--text);}
+.input-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem;margin-bottom:1.25rem;}
+textarea{width:100%;background:#0f0f13;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:12px;resize:vertical;min-height:110px;font-family:inherit;line-height:1.6;}
+textarea:focus{outline:none;border-color:var(--accent);}
+textarea::placeholder{color:var(--muted);}
+.btn-row{display:flex;gap:10px;margin-top:12px;align-items:center;}
+.btn{padding:10px 20px;border-radius:8px;border:none;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:#6b63c7;}
+.btn-primary:disabled{background:#333;color:#666;cursor:not-allowed;}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.btn-secondary:hover{border-color:#555;}
+.btn-danger{background:#e24b4b22;color:#e24b4b;border:1px solid #e24b4b44;}
+.btn-danger:hover{background:#e24b4b33;}
+.voice-panel{text-align:center;padding:1rem 0;}
+.voice-ring{width:80px;height:80px;border-radius:50%;border:2px solid var(--border);margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;position:relative;}
+.voice-ring.listening{border-color:var(--accent);animation:pulse 1.5s infinite;}
+.voice-ring svg{width:28px;height:28px;fill:var(--muted);}
+.voice-ring.listening svg{fill:var(--accent);}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 #7f77dd33;}50%{box-shadow:0 0 0 12px #7f77dd00;}}
+.voice-transcript{background:#0f0f13;border:1px solid var(--border);border-radius:8px;padding:12px;min-height:60px;font-size:14px;color:var(--text);line-height:1.6;margin-top:12px;text-align:left;}
+.voice-status{font-size:12px;color:var(--muted);margin-top:8px;}
+.result-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem;margin-bottom:1.25rem;display:none;}
+.result-card.visible{display:block;}
+.emotion-display{display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem;}
+.emotion-icon{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0;}
+.emotion-name{font-size:22px;font-weight:600;}
+.emotion-sub{font-size:13px;color:var(--muted);margin-top:2px;}
+.confidence-bar{margin-bottom:1.25rem;}
+.bar-label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px;}
+.bar-track{background:#0f0f13;border-radius:4px;height:8px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;transition:width 0.6s ease;}
+.emotion-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:1.25rem;}
+.emotion-chip{background:#0f0f13;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;}
+.chip-label{color:var(--muted);margin-bottom:4px;}
+.chip-bar{height:4px;border-radius:2px;margin-bottom:3px;}
+.chip-val{font-size:11px;color:var(--muted);}
+.response-box{background:#0f0f1f;border:1px solid #7f77dd33;border-radius:10px;padding:1rem;border-left:3px solid var(--accent);}
+.response-label{font-size:11px;color:var(--accent);font-weight:500;margin-bottom:6px;letter-spacing:0.05em;text-transform:uppercase;}
+.response-text{font-size:14px;line-height:1.7;color:var(--text);}
+.history-section{margin-top:1.5rem;}
+.history-title{font-size:13px;color:var(--muted);margin-bottom:10px;font-weight:500;}
+.history-list{display:flex;flex-direction:column;gap:8px;}
+.history-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:12px;font-size:13px;}
+.history-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.history-input{color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.history-emotion{font-weight:500;flex-shrink:0;}
+.history-time{color:var(--muted);font-size:11px;flex-shrink:0;}
+.loading{display:none;align-items:center;gap:10px;color:var(--muted);font-size:13px;padding:8px 0;}
+.loading.visible{display:flex;}
+.dots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);animation:dot 1.2s infinite;}
+.dots span:nth-child(2){animation-delay:0.2s;}
+.dots span:nth-child(3){animation-delay:0.4s;}
+@keyframes dot{0%,80%,100%{opacity:0.2;}40%{opacity:1;}}
+.error-msg{display:none;background:#e24b4b11;border:1px solid #e24b4b33;border-radius:8px;padding:10px 14px;font-size:13px;color:#e24b4b;margin-top:10px;}
+.error-msg.visible{display:block;}
+.api-note{background:#7f77dd11;border:1px solid #7f77dd33;border-radius:8px;padding:10px 14px;font-size:12px;color:var(--muted);margin-bottom:1.25rem;line-height:1.6;}
+.api-note strong{color:var(--accent);}
+footer{text-align:center;padding:2rem;color:var(--muted);font-size:12px;border-top:1px solid var(--border);margin-top:2rem;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Emoti<span>Sense</span> AI</div>
+  <div class="badge">Real-Time Emotion Recognition</div>
+</header>
+
+<div class="main">
+  <h1>Understand emotions instantly</h1>
+  <p class="sub">AI-powered emotion detection from text and voice — powered by Claude</p>
+
+  <div class="api-note">
+    <strong>How it works:</strong> Type or speak your text, and Claude analyzes it for emotional content across 8 dimensions — returning the primary emotion, confidence scores, and a personalized empathetic response in real time.
+  </div>
+
+  <div class="mode-row">
+    <button class="mode-btn active" id="modeText" onclick="setMode('text')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Text input
+    </button>
+    <button class="mode-btn" id="modeVoice" onclick="setMode('voice')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      Voice input
+    </button>
+  </div>
+
+  <div class="input-card" id="textPanel">
+    <textarea id="textInput" placeholder="Type how you're feeling, share a thought, write anything... EmotiSense will detect the emotion behind your words."></textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="analyzeBtn" onclick="analyzeText()">Analyze emotion</button>
+      <button class="btn btn-secondary" onclick="clearAll()">Clear</button>
+      <div class="loading" id="loadingText">
+        <div class="dots"><span></span><span></span><span></span></div>
+        Analyzing...
+      </div>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <div class="input-card" id="voicePanel" style="display:none;">
+    <div class="voice-panel">
+      <div class="voice-ring" id="voiceRing" onclick="toggleVoice()">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2" fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </div>
+      <p class="voice-status" id="voiceStatus">Click the microphone to start speaking</p>
+      <textarea id="voiceTranscript" rows="3" style="width:100%;background:#0f0f13;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:12px;resize:vertical;font-family:inherit;line-height:1.6;margin-top:12px;" placeholder="Your words will appear here as you speak... You can also edit this text." oninput="voiceTranscript=this.value;document.getElementById('analyzeVoiceBtn').disabled=!this.value.trim();"></textarea>
+      <div class="btn-row" style="justify-content:center;margin-top:12px;">
+        <button class="btn btn-primary" id="analyzeVoiceBtn" onclick="analyzeVoice()" disabled>Analyze emotion</button>
+        <button class="btn btn-secondary" onclick="clearVoice()">Clear</button>
+        <div class="loading" id="loadingVoice">
+          <div class="dots"><span></span><span></span><span></span></div>
+          Analyzing...
+        </div>
+      </div>
+      <div class="error-msg" id="errorVoice"></div>
+    </div>
+  </div>
+
+  <div class="result-card" id="resultCard">
+    <div class="emotion-display">
+      <div class="emotion-icon" id="emotionIcon"></div>
+      <div>
+        <div class="emotion-name" id="emotionName">—</div>
+        <div class="emotion-sub" id="emotionSub">—</div>
+      </div>
+    </div>
+
+    <div class="confidence-bar">
+      <div class="bar-label">
+        <span>Confidence</span>
+        <span id="confVal">—</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" id="confBar" style="width:0%;background:var(--accent);"></div>
+      </div>
+    </div>
+
+    <div class="emotion-grid" id="emotionGrid"></div>
+
+    <div class="response-box">
+      <div class="response-label">AI response</div>
+      <div class="response-text" id="responseText">—</div>
+    </div>
+  </div>
+
+  <div class="history-section" id="historySection" style="display:none;">
+    <div class="history-title">Session history</div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+</div>
+
+<footer>EmotiSense AI &mdash; Built for Vibe Awards Challenge Mode &mdash; Powered by Claude (Anthropic)</footer>
+
+<script>
+let currentMode = 'text';
+let recognition = null;
+let isListening = false;
+let voiceTranscript = '';
+let history = [];
+
+const EMOTION_CONFIG = {
+  joy:       { color:'#1d9e75', bg:'#1d9e7522', label:'Joy' },
+  sadness:   { color:'#378add', bg:'#378add22', label:'Sadness' },
+  anger:     { color:'#e24b4b', bg:'#e24b4b22', label:'Anger' },
+  fear:      { color:'#ef9f27', bg:'#ef9f2722', label:'Fear' },
+  surprise:  { color:'#d4537e', bg:'#d4537e22', label:'Surprise' },
+  disgust:   { color:'#854F0B', bg:'#ef9f2711', label:'Disgust' },
+  neutral:   { color:'#8888aa', bg:'#8888aa22', label:'Neutral' },
+  anticipation:{ color:'#7f77dd', bg:'#7f77dd22', label:'Anticipation' }
+};
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('textPanel').style.display = mode === 'text' ? 'block' : 'none';
+  document.getElementById('voicePanel').style.display = mode === 'voice' ? 'block' : 'none';
+  document.getElementById('modeText').className = 'mode-btn' + (mode === 'text' ? ' active' : '');
+  document.getElementById('modeVoice').className = 'mode-btn' + (mode === 'voice' ? ' active' : '');
+  document.getElementById('resultCard').className = 'result-card';
+}
+
+function showLoading(id, show) {
+  document.getElementById(id).className = 'loading' + (show ? ' visible' : '');
+}
+
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'error-msg' + (msg ? ' visible' : '');
+}
+
+async function callClaude(text) {
+  const response = await fetch('/.netlify/functions/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text })
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: response.statusText }));
+    throw new Error(err.error || 'Server error ' + response.status);
+  }
+
+  return await response.json();
+}
+
+function renderResult(result, inputText) {
+  const cfg = EMOTION_CONFIG[result.primary_emotion] || EMOTION_CONFIG.neutral;
+  const emotionIcons = { joy:'😊', sadness:'😔', anger:'😠', fear:'😨', surprise:'😲', disgust:'🤢', neutral:'😐', anticipation:'🤔' };
+
+  document.getElementById('emotionIcon').textContent = emotionIcons[result.primary_emotion] || '😐';
+  document.getElementById('emotionIcon').style.background = cfg.bg;
+  document.getElementById('emotionName').textContent = cfg.label;
+  document.getElementById('emotionSub').textContent = result.intensity + ' intensity · ' + result.sentiment + ' sentiment';
+
+  const conf = Math.round(result.confidence * 100);
+  document.getElementById('confVal').textContent = conf + '%';
+  document.getElementById('confBar').style.width = conf + '%';
+  document.getElementById('confBar').style.background = cfg.color;
+
+  const grid = document.getElementById('emotionGrid');
+  grid.innerHTML = '';
+  Object.entries(result.emotion_scores).sort((a,b) => b[1]-a[1]).forEach(([em, score]) => {
+    const c = EMOTION_CONFIG[em] || EMOTION_CONFIG.neutral;
+    const pct = Math.round(score * 100);
+    grid.innerHTML += `<div class="emotion-chip">
+      <div class="chip-label">${c.label}</div>
+      <div class="chip-bar" style="background:${c.color};width:${pct}%;min-width:${pct>0?'4px':'0'};"></div>
+      <div class="chip-val">${pct}%</div>
+    </div>`;
+  });
+
+  document.getElementById('responseText').textContent = result.empathetic_response;
+  document.getElementById('resultCard').className = 'result-card visible';
+
+  addHistory(inputText, result.primary_emotion, cfg);
+}
+
+function addHistory(text, emotion, cfg) {
+  const time = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  history.unshift({ text, emotion, cfg, time });
+  if(history.length > 5) history.pop();
+
+  const section = document.getElementById('historySection');
+  const list = document.getElementById('historyList');
+  section.style.display = 'block';
+  list.innerHTML = history.map(h => `
+    <div class="history-item">
+      <div class="history-dot" style="background:${h.cfg.color};"></div>
+      <div class="history-input">${h.text.slice(0,60)}${h.text.length>60?'...':''}</div>
+      <div class="history-emotion" style="color:${h.cfg.color};">${h.cfg.label}</div>
+      <div class="history-time">${h.time}</div>
+    </div>`).join('');
+}
+
+async function analyzeText() {
+  const text = document.getElementById('textInput').value.trim();
+  if(!text) return;
+  showError('errorMsg', '');
+  showLoading('loadingText', true);
+  document.getElementById('analyzeBtn').disabled = true;
+  try {
+    const result = await callClaude(text);
+    renderResult(result, text);
+  } catch(e) {
+    showError('errorMsg', 'Analysis failed: ' + e.message + '. Make sure the API is accessible.');
+  }
+  showLoading('loadingText', false);
+  document.getElementById('analyzeBtn').disabled = false;
+}
+
+async function analyzeVoice() {
+  const text = document.getElementById('voiceTranscript').value.trim();
+  if(!text) return;
+  showError('errorVoice', '');
+  showLoading('loadingVoice', true);
+  document.getElementById('analyzeVoiceBtn').disabled = true;
+  try {
+    const result = await callClaude(text);
+    renderResult(result, text);
+  } catch(e) {
+    showError('errorVoice', 'Analysis failed: ' + e.message);
+  }
+  showLoading('loadingVoice', false);
+  document.getElementById('analyzeVoiceBtn').disabled = false;
+}
+
+function toggleVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    setVoiceStatus('Voice recognition not supported. Use Chrome or Edge, or type in Text mode.', true);
+    return;
+  }
+  if (isListening) {
+    stopListening();
+  } else {
+    startListening();
+  }
+}
+
+function setVoiceStatus(msg, isError) {
+  const el = document.getElementById('voiceStatus');
+  el.textContent = msg;
+  el.style.color = isError ? '#e24b4b' : 'var(--muted)';
+}
+
+function startListening() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+  recognition.maxAlternatives = 1;
+
+  let intentionalStop = false;
+
+  recognition.onstart = () => {
+    isListening = true;
+    intentionalStop = false;
+    document.getElementById('voiceRing').className = 'voice-ring listening';
+    document.getElementById('voiceRing').setAttribute('aria-label', 'Stop recording');
+    setVoiceStatus('Listening... speak now. Click mic to stop.');
+  };
+
+  recognition.onresult = (e) => {
+    let interimText = '';
+    let finalChunk = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) {
+        finalChunk += t;
+      } else {
+        interimText += t;
+      }
+    }
+    if (finalChunk) {
+      voiceTranscript += (voiceTranscript ? ' ' : '') + finalChunk.trim();
+    }
+    const display = voiceTranscript + (interimText ? ' ' + interimText : '');
+    document.getElementById('voiceTranscript').value = display;
+    if (voiceTranscript.trim()) {
+      document.getElementById('analyzeVoiceBtn').disabled = false;
+    }
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error === 'no-speech') {
+      setVoiceStatus('No speech detected. Try again.');
+    } else if (e.error === 'not-allowed') {
+      setVoiceStatus('Microphone access denied. Allow mic in browser settings.', true);
+    } else if (e.error === 'network') {
+      setVoiceStatus('Network error. Check connection and try again.', true);
+    } else {
+      setVoiceStatus('Error: ' + e.error + '. Try again.', true);
+    }
+    intentionalStop = true;
+    isListening = false;
+    document.getElementById('voiceRing').className = 'voice-ring';
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+    document.getElementById('voiceRing').className = 'voice-ring';
+    document.getElementById('voiceRing').setAttribute('aria-label', 'Start recording');
+    if (!intentionalStop && voiceTranscript.trim()) {
+      setVoiceStatus('Done. Click mic to add more, or analyze below.');
+    } else if (!intentionalStop) {
+      setVoiceStatus('Stopped. Click mic to try again.');
+    }
+  };
+
+  try {
+    recognition.start();
+  } catch(err) {
+    setVoiceStatus('Could not start mic: ' + err.message, true);
+    isListening = false;
+  }
+
+  recognition._intentionalStop = () => { intentionalStop = true; };
+}
+
+function stopListening() {
+  if (recognition) {
+    if (recognition._intentionalStop) recognition._intentionalStop();
+    recognition.stop();
+  }
+  isListening = false;
+  document.getElementById('voiceRing').className = 'voice-ring';
+  setVoiceStatus(voiceTranscript.trim() ? 'Done. Analyze below or click mic to add more.' : 'Stopped. Click mic to try again.');
+}
+
+function clearVoice() {
+  stopListening();
+  voiceTranscript = '';
+  document.getElementById('voiceTranscript').value = '';
+  setVoiceStatus('Click the microphone to start speaking');
+  document.getElementById('analyzeVoiceBtn').disabled = true;
+  showError('errorVoice', '');
+}
+
+function clearAll() {
+  document.getElementById('textInput').value = '';
+  document.getElementById('resultCard').className = 'result-card';
+  showError('errorMsg', '');
+}
+
+document.getElementById('textInput').addEventListener('keydown', e => {
+  if(e.key === 'Enter' && e.ctrlKey) analyzeText();
+});
+</script>
+</body>
+</html>
