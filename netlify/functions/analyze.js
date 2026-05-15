@@ -37,7 +37,7 @@ exports.handler = async (event) => {
     headers: {
       'Content-Type': 'application/json',
       'Content-Length': Buffer.byteLength(payload),
-      'x-api-key': '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',
+      'x-api-key': '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',
       'anthropic-version': '2023-06-01'
     }
   };
